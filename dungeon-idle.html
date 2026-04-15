@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dungeon Idle</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  background:#0a0a14;
+  color:#dde;
+  font-family:'Press Start 2P',monospace;
+  font-size:8px;
+  line-height:1.6;
+  overflow:hidden;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+#game{
+  width:960px;
+  height:640px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:3px;
+  position:relative;
+  overflow:hidden;
+  margin:0 auto;
+}
+
+/* ── TOP BAR ── */
+#topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#10102a;
+  border:3px solid #5555cc;
+  box-shadow:inset 2px 2px 0 #7777ee,inset -2px -2px 0 #222266,3px 3px 0 #000;
+  padding:6px 12px;
+  flex-shrink:0;
+}
+#game-title{font-size:11px;color:#ff6644;text-shadow:2px 2px 0 #882200,0 0 20px #ff4400;}
+.res{display:flex;align-items:center;gap:6px;font-size:8px;}
+.res.gold{color:#ffd700;}
+.res.gems{color:#cc66ff;}
+.res.flr{color:#66ddff;}
+.res .label{color:#666899;font-size:6px;}
+.res .val{font-size:9px;font-weight:bold;}
+
+/* ── MAIN ── */
+#main{display:flex;gap:3px;flex:1;overflow:hidden;}
+
+/* ── LEFT COL ── */
+#left-col{display:flex;flex-direction:column;gap:3px;width:440px;flex-shrink:0;}
+
+.pbox{
+  background:#10102a;
+  border:3px solid #5555cc;
+  box-shadow:inset 2px 2px 0 #7777ee,inset -2px -2px 0 #222266,3px 3px 0 #000;
+  position:relative;
+}
+
+#battle-wrap{flex:1;overflow:hidden;cursor:crosshair;}
+#battle-canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
+
+/* click ripple */
+.click-ripple{
+  position:absolute;
+  width:40px;height:40px;
+  border:3px solid #ff4444;
+  border-radius:50%;
+  pointer-events:none;
+  transform:translate(-50%,-50%);
+  animation:ripple .4s ease-out forwards;
+}
+@keyframes ripple{from{opacity:1;transform:translate(-50%,-50%) scale(0.3);}to{opacity:0;transform:translate(-50%,-50%) scale(1.8);}}
+
+/* ── STATS ── */
+#stats-row{
+  padding:7px 10px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:6px;
+  flex-shrink:0;
+}
+.stat{color:#6677aa;font-size:6px;line-height:2;}
+.stat b{color:#eef;display:block;font-size:8px;margin-top:1px;}
+
+/* ── HOW TO PLAY STRIP ── */
+#howto-strip{
+  flex-shrink:0;
+  background:#0c0c20;
+  border:2px solid #444488;
+  padding:5px 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:6px;
+  color:#8899bb;
+  line-height:1.8;
+}
+.tip{display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.tip-icon{font-size:12px;}
+.tip-sep{color:#333366;font-size:10px;}
+
+/* ── RIGHT COL ── */
+#right-col{display:flex;flex-direction:column;gap:3px;flex:1;overflow:hidden;}
+
+/* ── TABS ── */
+#tabs{display:flex;gap:2px;flex-shrink:0;}
+.tb{
+  flex:1;
+  background:#16163a;
+  border:2px solid #5555cc;
+  color:#8888cc;
+  font-family:inherit;
+  font-size:7px;
+  padding:6px 2px;
+  cursor:pointer;
+  text-transform:uppercase;
+}
+.tb:hover,.tb.on{background:#2a2a5a;color:#fff;border-color:#aaaaff;box-shadow:inset 0 0 0 1px #ccccff;}
+
+/* ── PANEL ── */
+#panel{
+  flex:1;
+  background:#10102a;
+  border:3px solid #5555cc;
+  box-shadow:inset 2px 2px 0 #7777ee,inset -2px -2px 0 #222266,3px 3px 0 #000;
+  overflow-y:auto;
+  padding:8px;
+}
+#panel::-webkit-scrollbar{width:8px;}
+#panel::-webkit-scrollbar-track{background:#0a0a14;}
+#panel::-webkit-scrollbar-thumb{background:#5555cc;}
+
+/* ── HERO CARDS ── */
+.hcard{
+  border:2px solid #2a2a55;
+  background:#0c0c20;
+  padding:6px 8px;
+  margin-bottom:4px;
+  display:grid;
+  grid-template-columns:42px 1fr auto;
+  gap:8px;
+  align-items:center;
+  cursor:pointer;
+  transition:border-color .1s,background .1s;
+}
+.hcard:hover{border-color:#7777cc;background:#18183a;}
+.hcard.dim{opacity:0.4;cursor:not-allowed;}
+.hcard.dim:hover{border-color:#2a2a55;background:#0c0c20;}
+.hico{
+  width:38px;height:38px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  background:#18183a;border:2px solid #2a2a55;
+}
+.hname{margin-bottom:3px;font-size:7px;}
+.hown{color:#ffd700;font-size:7px;}
+.hdps{color:#66ee88;font-size:6px;margin-top:2px;}
+.hcost{text-align:right;color:#ffd700;font-size:7px;white-space:nowrap;}
+.hbuy-n{font-size:6px;color:#8899bb;text-align:right;margin-top:3px;}
+
+/* ── BUY QTY ── */
+.buy-row{display:flex;gap:3px;margin-bottom:6px;align-items:center;}
+.buy-label{color:#6677aa;font-size:6px;margin-right:4px;}
+.bqty{
+  background:#16163a;border:2px solid #4444aa;color:#8888ff;
+  font-family:inherit;font-size:6px;padding:3px 7px;cursor:pointer;
+}
+.bqty.on{background:#3333aa;color:#fff;border-color:#aaaaff;}
+
+/* ── UPGRADE CARDS ── */
+.ucard{
+  border:2px solid #2a2a55;
+  background:#0c0c20;
+  padding:6px 8px;
+  margin-bottom:4px;
+  cursor:pointer;
+  position:relative;
+}
+.ucard:hover{border-color:#7777cc;background:#18183a;}
+.ucard.done{border-color:#336633;background:#0a180a;cursor:default;}
+.ucard.dim{opacity:0.4;}
+.ulvl{position:absolute;top:5px;right:6px;font-size:6px;color:#66ee88;}
+.uname{color:#ffcc66;font-size:7px;margin-bottom:3px;}
+.udesc{color:#7788aa;font-size:6px;margin-bottom:4px;line-height:1.8;}
+.ucost{color:#ffd700;font-size:7px;}
+
+/* ── ACHIEVEMENT CARDS ── */
+.acard{
+  border:2px solid #2a2a55;background:#0c0c20;
+  padding:6px 8px;margin-bottom:4px;
+  display:flex;gap:8px;align-items:center;
+}
+.acard.got{border-color:#665500;background:#14100a;}
+.aico{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
+.aname{color:#887755;font-size:7px;margin-bottom:2px;}
+.acard.got .aname{color:#ffd700;}
+.adesc{color:#554433;font-size:6px;line-height:1.8;}
+.acard.got .adesc{color:#aaa;}
+
+/* ── PRESTIGE ── */
+#prest-panel{text-align:center;padding:14px 10px;}
+.pinfo{margin-bottom:14px;color:#9999bb;line-height:2.4;font-size:7px;}
+.pinfo .big{font-size:10px;color:#cc88ff;display:block;margin:8px 0;}
+#prest-btn{
+  background:#220044;border:3px solid #9933ff;color:#cc88ff;
+  font-family:inherit;font-size:9px;padding:10px 20px;cursor:pointer;
+  box-shadow:3px 3px 0 #000;text-transform:uppercase;margin-top:8px;
+}
+#prest-btn:hover:not(:disabled){background:#3a006a;color:#fff;}
+#prest-btn:disabled{opacity:0.35;cursor:default;}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{
+  color:#5566aa;font-size:7px;
+  border-bottom:2px solid #2a2a55;
+  margin-bottom:6px;padding-bottom:4px;margin-top:10px;
+  text-transform:uppercase;
+  display:flex;align-items:center;gap:6px;
+}
+.sec-hdr:first-child{margin-top:0;}
+
+/* ── NOTIFICATIONS ── */
+#notifs{
+  position:absolute;top:52px;right:6px;
+  pointer-events:none;z-index:200;width:240px;
+}
+.notif{
+  background:#14143a;border:2px solid #9933ff;color:#cc88ff;
+  padding:6px 10px;margin-bottom:4px;font-size:6px;line-height:2;
+  box-shadow:2px 2px 0 #000;
+  animation:nslide .25s ease,nfade .4s ease 2.6s forwards;
+}
+.notif.boss{border-color:#ff3333;color:#ff9999;font-size:7px;}
+.notif.ach{border-color:#aa8800;color:#ffd700;}
+@keyframes nslide{from{transform:translateX(110%);opacity:0;}to{transform:none;opacity:1;}}
+@keyframes nfade{from{opacity:1;}to{opacity:0;transform:translateX(110%);}}
+
+/* ── OVERLAYS ── */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:900;}
+#overlay.on{display:block;}
+
+/* ── HELP POPUP ── */
+#help-popup{
+  display:none;position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#10102a;border:4px solid #5555cc;
+  padding:20px 24px;z-index:1000;text-align:left;
+  box-shadow:6px 6px 0 #000;min-width:300px;max-width:460px;
+}
+#help-popup h2{color:#ff6644;font-size:10px;margin-bottom:14px;text-align:center;}
+.help-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:6px;line-height:2;}
+.help-row .hi{font-size:18px;flex-shrink:0;width:26px;text-align:center;margin-top:2px;}
+.help-row .ht{color:#ccd;}
+.help-row .ht b{color:#ffd700;display:block;font-size:7px;margin-bottom:2px;}
+.popup-close{
+  display:block;width:100%;margin-top:14px;
+  background:#220044;border:2px solid #9933ff;color:#cc88ff;
+  font-family:inherit;font-size:8px;padding:8px;cursor:pointer;text-align:center;
+}
+
+/* ── OFFLINE POPUP ── */
+#off-popup{
+  display:none;position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#10102a;border:4px solid #9933ff;
+  padding:22px 26px;z-index:1000;text-align:center;
+  box-shadow:6px 6px 0 #000;min-width:240px;
+}
+#off-popup h2{color:#cc88ff;font-size:10px;margin-bottom:12px;}
+#off-popup p{color:#ccd;font-size:7px;margin-bottom:6px;line-height:2;}
+#off-popup .og{color:#ffd700;font-size:12px;margin:10px 0;}
+#off-popup button{
+  background:#220044;border:2px solid #9933ff;color:#cc88ff;
+  font-family:inherit;font-size:8px;padding:8px 16px;cursor:pointer;margin-top:8px;
+}
+
+/* ── MILESTONE BANNER ── */
+#milestone{
+  display:none;position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#0a0a20;border:3px solid #ffcc00;
+  padding:12px 22px;z-index:500;text-align:center;
+  box-shadow:4px 4px 0 #000;
+  animation:mfade 2.5s ease forwards;
+  pointer-events:none;
+}
+#milestone span{font-size:10px;color:#ffd700;text-shadow:0 0 12px #ffaa00;}
+@keyframes mfade{0%{opacity:0;transform:translate(-50%,-55%);}15%{opacity:1;transform:translate(-50%,-50%);}75%{opacity:1;}100%{opacity:0;transform:translate(-50%,-45%);}}
+
+/* ── SCANLINES ── */
+#scanlines{
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+  pointer-events:none;z-index:9999;
+}
+</style>
+</head>
+<body>
+<div id="scanlines"></div>
+<div id="overlay"></div>
+
+<div id="game">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div id="game-title">⚔ DUNGEON IDLE</div>
+    <div class="res gold"><span class="label">GOLD</span><span class="val" id="v-gold">0</span></div>
+    <div class="res gems"><span class="label">GEMS</span><span class="val" id="v-gems">0</span> 💎</div>
+    <div class="res flr"><span class="label">FLOOR</span><span class="val" id="v-floor">1</span></div>
+    <button onclick="showHelp()" style="background:#1a1a3a;border:2px solid #5555cc;color:#aaaaff;font-family:inherit;font-size:7px;padding:4px 8px;cursor:pointer;">? HELP</button>
+    <div style="font-size:6px;color:#445566;cursor:pointer" onclick="hardReset()" title="Hard Reset (erase save)">⚙ RESET</div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- LEFT: battle + stats + tips -->
+    <div id="left-col">
+
+      <!-- BATTLE CANVAS -->
+      <div class="pbox" id="battle-wrap">
+        <canvas id="battle-canvas"></canvas>
+      </div>
+
+      <!-- STATS -->
+      <div class="pbox" id="stats-row">
+        <div class="stat"><span>⚔ HERO DPS</span><b id="v-dps">0</b></div>
+        <div class="stat"><span>💰 GOLD/SEC</span><b id="v-gps">0</b></div>
+        <div class="stat"><span>💀 MONSTERS</span><b id="v-kills">0</b></div>
+        <div class="stat"><span>🏆 BEST</span><b id="v-best">F1</b></div>
+      </div>
+
+      <!-- HOW TO PLAY STRIP -->
+      <div id="howto-strip">
+        <div class="tip"><span class="tip-icon">👆</span><span><b style="color:#ffd700">CLICK</b> the monster to deal bonus damage</span></div>
+        <span class="tip-sep">|</span>
+        <div class="tip"><span class="tip-icon">👥</span><span>Buy <b style="color:#ffd700">Heroes</b> → they auto-fight</span></div>
+        <span class="tip-sep">|</span>
+        <div class="tip"><span class="tip-icon">✨</span><span><b style="color:#cc88ff">Prestige</b> for permanent bonus</span></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: tabs + panel -->
+    <div id="right-col">
+      <div id="tabs">
+        <button class="tb on" data-t="heroes">⚔ Heroes</button>
+        <button class="tb" data-t="upgrades">⬆ Upgrades</button>
+        <button class="tb" data-t="trophies">🏆 Trophies</button>
+        <button class="tb" data-t="prestige">✨ Prestige</button>
+      </div>
+      <div id="panel"></div>
+    </div>
+
+  </div>
+
+  <div id="notifs"></div>
+  <div id="milestone"><span id="milestone-text"></span></div>
+</div>
+
+<!-- HELP POPUP -->
+<div id="help-popup">
+  <h2>⚔ HOW TO PLAY</h2>
+  <div class="help-row"><span class="hi">👆</span><div class="ht"><b>Click the Monster</b>Tap the monster in the battle screen to deal instant bonus damage. Great for killing tough bosses!</div></div>
+  <div class="help-row"><span class="hi">⚔</span><div class="ht"><b>Buy Heroes (auto-attack)</b>Heroes fight automatically. Each costs more than the last but deals far more damage. Unlock all 8 types!</div></div>
+  <div class="help-row"><span class="hi">⬆</span><div class="ht"><b>Upgrades (multipliers)</b>Once you own enough heroes, buy milestone upgrades. Each doubles or more that hero's damage permanently.</div></div>
+  <div class="help-row"><span class="hi">🏰</span><div class="ht"><b>Floor Progression</b>Every monster killed advances you one floor. Harder monsters = more gold. Every 10th floor is a BOSS!</div></div>
+  <div class="help-row"><span class="hi">✨</span><div class="ht"><b>Prestige (once you hit floor 20+)</b>Reset your run for 💎 Gems. Gems give a permanent gold bonus to all future runs — snowballs fast!</div></div>
+  <div class="help-row"><span class="hi">💾</span><div class="ht"><b>Auto-save</b>Game saves every 30 seconds and earns offline gold for up to 8 hours while you're away.</div></div>
+  <button class="popup-close" onclick="closeHelp()">LET'S PLAY!</button>
+</div>
+
+<!-- OFFLINE POPUP -->
+<div id="off-popup">
+  <h2>WELCOME BACK!</h2>
+  <p>Away for <span id="off-time" style="color:#88aaff;font-size:8px;"></span></p>
+  <p>Your heroes earned:</p>
+  <div class="og">💰 <span id="off-gold"></span></div>
+  <button onclick="closeOffline()">COLLECT!</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  STATIC DATA
+// ══════════════════════════════════════════════════════════════
+
+const HEROES = [
+  {name:'Knight',     e:'⚔️', baseDPS:1,      baseCost:10,       col:'#5599ff'},
+  {name:'Archer',     e:'🏹', baseDPS:8,      baseCost:80,       col:'#44cc66'},
+  {name:'Mage',       e:'🔮', baseDPS:47,     baseCost:500,      col:'#cc44cc'},
+  {name:'Paladin',    e:'🛡️', baseDPS:250,    baseCost:3000,     col:'#ffcc44'},
+  {name:'Warlord',    e:'🗡️', baseDPS:1400,   baseCost:20000,    col:'#ff8844'},
+  {name:'Archmage',   e:'✨', baseDPS:7800,   baseCost:130000,   col:'#bb44ff'},
+  {name:'Demonlord',  e:'👹', baseDPS:44000,  baseCost:1000000,  col:'#ff4466'},
+  {name:'God of War', e:'⚡', baseDPS:260000, baseCost:8000000,  col:'#ffffff'},
+];
+
+const MILESTONES = [10,25,50,100,200,300];
+const UPGRADES = [];
+HEROES.forEach((h,hi)=>{
+  MILESTONES.forEach((m,mi)=>{
+    UPGRADES.push({
+      id:`h${hi}_m${mi}`,
+      heroIdx:hi,
+      name:`${h.name} Lv.${mi+1}`,
+      desc:`×${Math.pow(2,mi+1)} damage to all ${h.name}s (need ${m} owned)`,
+      cost: Math.round(h.baseCost * Math.pow(8, mi+1)),
+      req: m,
+    });
+  });
+});
+
+const MONSTERS = [
+  {name:'Slime',    f:[1,10],  col:'#33bb44',c2:'#227733',eye:'#ffff44',sh:0.8},
+  {name:'Goblin',   f:[11,25], col:'#bb8844',c2:'#885522',eye:'#ff4444',sh:0.9},
+  {name:'Orc',      f:[26,50], col:'#668844',c2:'#445522',eye:'#ff8800',sh:1.0},
+  {name:'Skeleton', f:[51,80], col:'#ccccaa',c2:'#aaaabb',eye:'#4466ff',sh:0.95},
+  {name:'Dragon',   f:[81,130],col:'#cc4444',c2:'#882222',eye:'#ffff00',sh:1.15},
+  {name:'Demon',    f:[131,999],col:'#9933bb',c2:'#662299',eye:'#ff2200',sh:1.1},
+];
+
+const ACHS = [
+  {id:'fk',   icon:'🩸', name:'First Blood',      desc:'Kill your first monster',              chk:g=>g.kills>=1},
+  {id:'f10',  icon:'🗡️', name:'Dungeon Diver',     desc:'Reach floor 10',                       chk:g=>g.maxF>=10},
+  {id:'f50',  icon:'⛏️', name:'Deep Delver',       desc:'Reach floor 50',                       chk:g=>g.maxF>=50},
+  {id:'f100', icon:'💯', name:'Century Crawler',   desc:'Reach floor 100',                      chk:g=>g.maxF>=100},
+  {id:'f500', icon:'🌟', name:'Legend',            desc:'Reach floor 500',                      chk:g=>g.maxF>=500},
+  {id:'h1',   icon:'👤', name:'Recruit',           desc:'Hire your first hero',                 chk:g=>g.h.some(v=>v>0)},
+  {id:'h50',  icon:'👥', name:'Army General',      desc:'Own 50 total heroes',                  chk:g=>g.h.reduce((a,b)=>a+b,0)>=50},
+  {id:'h200', icon:'⚔️', name:'War Commander',     desc:'Own 200 total heroes',                 chk:g=>g.h.reduce((a,b)=>a+b,0)>=200},
+  {id:'hall', icon:'🌈', name:'Full Roster',       desc:'Hire all 8 hero types',                chk:g=>g.h.every(v=>v>0)},
+  {id:'b1',   icon:'💀', name:'Boss Slayer',       desc:'Defeat your first boss',               chk:g=>g.bosses>=1},
+  {id:'b25',  icon:'🏆', name:'Boss Hunter',       desc:'Defeat 25 bosses',                     chk:g=>g.bosses>=25},
+  {id:'u1',   icon:'⬆️', name:'Power Up',          desc:'Buy your first upgrade',               chk:g=>Object.keys(g.u).length>0},
+  {id:'c100', icon:'👆', name:'Click Warrior',     desc:'Click the monster 100 times',          chk:g=>g.clicks>=100},
+  {id:'c1k',  icon:'🖱️', name:'Finger of Doom',   desc:'Click 1000 times',                     chk:g=>g.clicks>=1000},
+  {id:'p1',   icon:'♻️', name:'Born Again',        desc:'Prestige for the first time',          chk:g=>g.prest>=1},
+  {id:'p5',   icon:'🔮', name:'Eternal Warrior',   desc:'Prestige 5 times',                     chk:g=>g.prest>=5},
+  {id:'g1m',  icon:'💰', name:'Millionaire',       desc:'Earn 1,000,000 total gold',            chk:g=>g.tgold>=1e6},
+  {id:'g1b',  icon:'🏦', name:'Billionaire',       desc:'Earn 1,000,000,000 total gold',        chk:g=>g.tgold>=1e9},
+  {id:'g1t',  icon:'🌍', name:'Trillionaire',      desc:'Earn 1,000,000,000,000 total gold',    chk:g=>g.tgold>=1e12},
+  {id:'dm',   icon:'👑', name:'Demon Slayer',      desc:'Reach floor 131+ (Demon territory)',   chk:g=>g.maxF>=131},
+];
+
+// ══════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════
+
+let G = newState();
+function newState(){
+  return {
+    gold:50, gems:0, tgold:0,
+    floor:1, maxF:1,
+    mhp:0, mmhp:0,
+    kills:0, bosses:0, clicks:0,
+    h:new Array(8).fill(0),
+    u:{},
+    prest:0,
+    ach:new Set(),
+    ts:Date.now(),
+  };
+}
+
+let V = {
+  ft:[], gp:[],
+  sx:0, sy:0,
+  anim:0,
+  dead:false, deadT:0,
+  bossWarn:0,
+  tab:'heroes',
+  buyQty:1,
+  torch:0,
+  panelDirty:true,
+  clickPrompt:true,  // show "CLICK ME!" until first click
+  clickPromptAlpha:1,
+  hovered:false,     // is mouse over canvas monster area
+};
+
+// ══════════════════════════════════════════════════════════════
+//  FORMULAE
+// ══════════════════════════════════════════════════════════════
+
+function monsterFor(f){
+  for(const m of MONSTERS) if(f>=m.f[0]&&f<=m.f[1]) return m;
+  return MONSTERS[MONSTERS.length-1];
+}
+function isBoss(f){ return f%10===0; }
+
+function mhpFor(f){
+  // Early floors are intentionally easy so players can buy first heroes fast
+  const early = Math.max(1, 1 - (f-1)/12); // scales from 1 → 0 over floors 1-12
+  const base = f * 15 * Math.pow(1.09, f/8);
+  const reduced = base * (0.25 + 0.75*(1-early)); // floors 1-5: ~25% HP, ramps to full by floor 12
+  return Math.max(5, Math.floor(reduced * (isBoss(f)?10:1)));
+}
+function goldFor(f){
+  return Math.pow(1.13,f/5)*(1+f*.3)*(isBoss(f)?8:1)*gemMult();
+}
+function gemMult(){ return Math.pow(1.04,G.gems); }
+
+function heroCost(i,qty=1){
+  let t=0;
+  for(let q=0;q<qty;q++) t+=HEROES[i].baseCost*Math.pow(1.15,G.h[i]+q);
+  return Math.floor(t);
+}
+function heroDPS(i){
+  if(!G.h[i]) return 0;
+  let mult=1;
+  MILESTONES.forEach((_,mi)=>{ if(G.u[`h${i}_m${mi}`]) mult*=Math.pow(2,mi+1); });
+  return HEROES[i].baseDPS*G.h[i]*mult;
+}
+function totalDPS(){ return G.h.reduce((_,__,i)=>_+heroDPS(i),0); }
+function gps(){
+  const dps=totalDPS(); if(!dps) return 0;
+  return goldFor(G.floor)/(mhpFor(G.floor)/dps+0.4);
+}
+function maxBuy(i){
+  let qty=0,gold=G.gold;
+  while(qty<9999){
+    const c=HEROES[i].baseCost*Math.pow(1.15,G.h[i]+qty);
+    if(gold<Math.floor(c)) break;
+    gold-=Math.floor(c); qty++;
+  }
+  return qty;
+}
+
+// click damage = 10% of DPS (minimum 1)
+// Click always kills in ~3 hits regardless of floor — makes early game feel responsive
+function clickDmg(){ return Math.max(Math.ceil(G.mmhp/3), totalDPS()*0.5 + 1); }
+
+// ══════════════════════════════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════════════════════════════
+
+function buyHero(i){
+  const qty=V.buyQty==='max'?Math.max(1,maxBuy(i)):V.buyQty;
+  const cost=heroCost(i,qty);
+  if(G.gold<cost) return;
+  G.gold-=cost; G.h[i]+=qty;
+  checkAch(); V.panelDirty=true;
+}
+
+function buyUpgrade(id){
+  const upg=UPGRADES.find(u=>u.id===id);
+  if(!upg||G.u[id]) return;
+  if(G.h[upg.heroIdx]<upg.req){ toast('Need more '+HEROES[upg.heroIdx].name+'s!'); return; }
+  if(G.gold<upg.cost) return;
+  G.gold-=upg.cost; G.u[id]=1;
+  checkAch(); V.panelDirty=true;
+  toast(`${HEROES[upg.heroIdx].e} ${upg.name} purchased!`);
+}
+
+function spawnMonster(){
+  G.mmhp=mhpFor(G.floor); G.mhp=G.mmhp;
+  V.dead=false; V.deadT=0;
+  if(isBoss(G.floor)){ V.bossWarn=120; toast(`⚠️ BOSS INCOMING – Floor ${G.floor}!`,'boss'); }
+}
+
+function killMonster(){
+  const gold=goldFor(G.floor);
+  G.gold+=gold; G.tgold+=gold; G.kills++;
+  if(isBoss(G.floor)){
+    G.bosses++; V.sx=10; V.sy=10;
+    toast(`💀 Boss slain! +${fmt(gold)} gold!`,'boss');
+  }
+  V.ft.push({x:CW/2+(Math.random()-.5)*50,y:CH*.45,t:'+'+fmt(gold),c:'#ffd700',l:55,vy:-1.8});
+  for(let i=0;i<6;i++) V.gp.push({x:CW/2,y:CH*.42,vx:(Math.random()-.5)*5,vy:-Math.random()*3-1,l:35+Math.random()*20});
+  V.dead=true; V.deadT=12;
+  G.floor++;
+  if(G.floor>G.maxF){ G.maxF=G.floor; checkMilestones(); }
+  checkAch();
+}
+
+function onCanvasClick(e){
+  if(V.dead) return;
+  const rect=canvas.getBoundingClientRect();
+  const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+
+  // Ripple effect
+  const ripple=document.createElement('div');
+  ripple.className='click-ripple';
+  ripple.style.left=cx+'px'; ripple.style.top=cy+'px';
+  document.getElementById('battle-wrap').appendChild(ripple);
+  setTimeout(()=>ripple.remove(),420);
+
+  // Deal click damage
+  const dmg=clickDmg();
+  G.mhp=Math.max(0,G.mhp-dmg);
+  G.clicks++;
+
+  // Hide click prompt after first click
+  if(V.clickPrompt){ V.clickPrompt=false; }
+
+  // Floating damage text
+  V.ft.push({x:cx,y:cy,t:'-'+fmt(dmg),c:'#ff9944',l:40,vy:-2.2,big:true});
+
+  if(G.mhp<=0) killMonster();
+  checkAch();
+}
+
+function doPrestige(){
+  if(!canPrest()) return;
+  const g=gemsFor(); G.gems+=g; G.prest++;
+  G.gold=0; G.floor=1; G.h=new Array(8).fill(0); G.u={};
+  G.kills=0; G.bosses=0; G.mmhp=0; G.mhp=0;
+  spawnMonster(); checkAch(); V.panelDirty=true;
+  toast(`✨ Prestige #${G.prest}! +${g} 💎 Bonus: +${((gemMult()-1)*100).toFixed(0)}%`,'prest');
+}
+
+function canPrest(){ return G.maxF>=20; }
+function gemsFor(){ return Math.floor(G.maxF/10); }
+
+// ══════════════════════════════════════════════════════════════
+//  ACHIEVEMENTS / MILESTONES
+// ══════════════════════════════════════════════════════════════
+
+function checkAch(){
+  for(const a of ACHS){
+    if(!G.ach.has(a.id)&&a.chk(G)){ G.ach.add(a.id); toast(`🏆 ${a.name}!`,'ach'); }
+  }
+}
+
+const FLOOR_MS=[10,25,50,100,200,300,500,750,1000];
+let lastMS=0;
+function checkMilestones(){
+  for(const m of FLOOR_MS){
+    if(G.maxF>=m&&lastMS<m){ lastMS=m; showMilestone(`★ FLOOR ${m} REACHED! ★`); }
+  }
+}
+function showMilestone(txt){
+  const el=document.getElementById('milestone');
+  document.getElementById('milestone-text').textContent=txt;
+  el.style.display='block'; el.style.animation='none';
+  void el.offsetWidth; el.style.animation='mfade 2.5s ease forwards';
+  setTimeout(()=>el.style.display='none',2600);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SAVE / LOAD
+// ══════════════════════════════════════════════════════════════
+
+function save(){
+  try{
+    localStorage.setItem('di_v3',JSON.stringify({
+      gold:G.gold,gems:G.gems,tgold:G.tgold,
+      floor:G.floor,maxF:G.maxF,kills:G.kills,bosses:G.bosses,clicks:G.clicks||0,
+      h:G.h,u:G.u,prest:G.prest,ach:[...G.ach],ts:Date.now(),
+    }));
+  }catch(e){}
+}
+
+function load(){
+  try{
+    const raw=localStorage.getItem('di_v3');
+    if(!raw) return false;
+    const d=JSON.parse(raw);
+    G.gold=d.gold||0; G.gems=d.gems||0; G.tgold=d.tgold||0;
+    G.floor=d.floor||1; G.maxF=d.maxF||1;
+    G.kills=d.kills||0; G.bosses=d.bosses||0; G.clicks=d.clicks||0;
+    G.h=d.h||new Array(8).fill(0); G.u=d.u||{};
+    G.prest=d.prest||0; G.ach=new Set(d.ach||[]);
+    const offS=Math.min((Date.now()-(d.ts||Date.now()))/1000,8*3600);
+    if(offS>60){ const g=gps()*offS; G.gold+=g; G.tgold+=g; showOffline(offS,g); }
+    lastMS=0; for(const m of FLOOR_MS){ if(G.maxF>=m) lastMS=m; }
+    return true;
+  }catch(e){ return false; }
+}
+
+function hardReset(){
+  if(!confirm('Erase all progress and start over?')) return;
+  localStorage.removeItem('di_v3');
+  G=newState(); V.tab='heroes'; V.clickPrompt=true;
+  spawnMonster(); renderPanel(); renderStats();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  POPUPS
+// ══════════════════════════════════════════════════════════════
+
+function toast(msg,type=''){
+  const el=document.createElement('div');
+  el.className='notif '+(type==='boss'?'boss':type==='ach'?'ach':'');
+  el.textContent=msg;
+  document.getElementById('notifs').appendChild(el);
+  setTimeout(()=>el.remove(),3200);
+}
+function showOffline(sec,gold){
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  document.getElementById('off-time').textContent=h?`${h}h ${m}m`:`${m}m`;
+  document.getElementById('off-gold').textContent=fmt(gold);
+  document.getElementById('off-popup').style.display='block';
+  document.getElementById('overlay').classList.add('on');
+}
+function closeOffline(){
+  document.getElementById('off-popup').style.display='none';
+  document.getElementById('overlay').classList.remove('on');
+}
+function showHelp(){
+  document.getElementById('help-popup').style.display='block';
+  document.getElementById('overlay').classList.add('on');
+}
+function closeHelp(){
+  document.getElementById('help-popup').style.display='none';
+  document.getElementById('overlay').classList.remove('on');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FORMAT
+// ══════════════════════════════════════════════════════════════
+
+function fmt(n){
+  if(!isFinite(n)||isNaN(n)) return '0';
+  if(n<1000) return Math.floor(n).toString();
+  const sf=['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
+  const i=Math.min(Math.floor(Math.log10(Math.abs(n))/3),sf.length-1);
+  const v=n/Math.pow(1000,i);
+  return (v>=100?v.toFixed(1):v.toFixed(2))+sf[i];
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CANVAS
+// ══════════════════════════════════════════════════════════════
+
+const canvas=document.getElementById('battle-canvas');
+const ctx=canvas.getContext('2d');
+let CW=440,CH=420;
+
+function resizeCanvas(){
+  const wrap=document.getElementById('battle-wrap');
+  CW=wrap.clientWidth; CH=wrap.clientHeight;
+  canvas.width=CW; canvas.height=CH;
+}
+
+// ── Sprites ──
+
+function drawSlime(x,y,s,m,t){
+  ctx.fillStyle=m.col;
+  ctx.beginPath(); ctx.ellipse(x,y,s*28,s*20,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=m.c2;
+  ctx.beginPath(); ctx.ellipse(x-s*8,y-s*6,s*9,s*6,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.ellipse(x-s*9,y-s*4,s*4.5,s*4.5,0,0,Math.PI*2); ctx.ellipse(x+s*9,y-s*4,s*4.5,s*4.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=m.eye;
+  ctx.beginPath(); ctx.ellipse(x-s*9,y-s*4,s*2,s*2,0,0,Math.PI*2); ctx.ellipse(x+s*9,y-s*4,s*2,s*2,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=m.col;
+  ctx.beginPath(); ctx.moveTo(x-s*5,y+s*19); ctx.lineTo(x-s*8,y+s*19+s*12+Math.sin(t*.08)*s*4); ctx.lineTo(x-s*2,y+s*19); ctx.fill();
+}
+
+function drawGoblin(x,y,s,m,t){
+  const by=s*17;
+  ctx.fillStyle=m.col; ctx.fillRect(x-s*14,y-by,s*28,by*2+s*5);
+  ctx.fillRect(x-s*11,y-by-s*22,s*22,s*22);
+  ctx.fillRect(x-s*19,y-by-s*18,s*8,s*9); ctx.fillRect(x+s*11,y-by-s*18,s*8,s*9);
+  ctx.fillStyle=m.eye; ctx.fillRect(x-s*8,y-by-s*16,s*4,s*4); ctx.fillRect(x+s*4,y-by-s*16,s*4,s*4);
+  ctx.fillStyle='#111'; ctx.fillRect(x-s*7,y-by-s*6,s*14,s*3);
+  const wa=Math.sin(t*.1)*.2;
+  ctx.save(); ctx.translate(x+s*15,y-s*5); ctx.rotate(wa);
+  ctx.fillStyle='#aaa'; ctx.fillRect(-s*2,-s*22,s*4,s*38);
+  ctx.fillStyle='#777'; ctx.fillRect(-s*8,-s*8,s*16,s*4); ctx.restore();
+}
+
+function drawOrc(x,y,s,m,t){
+  ctx.fillStyle=m.col; ctx.fillRect(x-s*20,y-s*12,s*40,s*40); ctx.fillRect(x-s*16,y-s*32,s*32,s*22);
+  ctx.fillStyle='#ffeecc'; ctx.fillRect(x-s*10,y-s*14,s*5,s*10); ctx.fillRect(x+s*5,y-s*14,s*5,s*10);
+  ctx.fillStyle=m.eye; ctx.fillRect(x-s*10,y-s*26,s*6,s*6); ctx.fillRect(x+s*4,y-s*26,s*6,s*6);
+  ctx.fillStyle='#445544'; ctx.fillRect(x-s*18,y-s*6,s*36,s*6); ctx.fillRect(x-s*18,y+s*4,s*36,s*5);
+}
+
+function drawSkeleton(x,y,s,m,t){
+  const arm=Math.sin(t*.09)*.28;
+  ctx.fillStyle=m.col; ctx.fillRect(x-s*12,y-s*8,s*24,s*26);
+  for(let i=0;i<4;i++){ ctx.fillStyle='#0a0a14'; ctx.fillRect(x-s*10,y-s*6+s*i*6,s*20,s*3); }
+  ctx.fillStyle=m.col; ctx.beginPath(); ctx.ellipse(x,y-s*23,s*13,s*15,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=m.eye; ctx.fillRect(x-s*9,y-s*28,s*6,s*6); ctx.fillRect(x+s*3,y-s*28,s*6,s*6);
+  ctx.fillStyle=m.col; ctx.fillRect(x-s*10,y-s*13,s*20,s*6);
+  ctx.fillStyle='#0a0a14'; [x-s*8,x-s*1,x+s*6].forEach(tx=>ctx.fillRect(tx,y-s*13,s*4,s*4));
+  [[-s*14,-1],[s*14,1]].forEach(([ox,sg])=>{
+    ctx.save(); ctx.translate(x+ox,y-s*2); ctx.rotate(arm*sg);
+    ctx.fillStyle=m.col; ctx.fillRect(-s*3,-s*4,s*6,s*26); ctx.restore();
+  });
+}
+
+function drawDragon(x,y,s,m,t){
+  const wf=Math.sin(t*.1)*.18;
+  ctx.save(); ctx.translate(x-s*10,y-s*10); ctx.rotate(wf);
+  ctx.fillStyle=m.c2+'cc'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-s*40,-s*32); ctx.lineTo(-s*32,s*12); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.fillStyle=m.col; ctx.beginPath(); ctx.ellipse(x,y,s*26,s*18,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+s*22,y-s*10,s*18,s*13,.5,0,Math.PI*2); ctx.fill();
+  ctx.fillRect(x+s*30,y-s*13,s*15,s*9);
+  ctx.fillStyle=m.c2; ctx.beginPath(); ctx.moveTo(x+s*14,y-s*22); ctx.lineTo(x+s*18,y-s*40); ctx.lineTo(x+s*24,y-s*22); ctx.fill();
+  ctx.fillStyle=m.eye; ctx.shadowColor=m.eye; ctx.shadowBlur=s*4;
+  ctx.beginPath(); ctx.ellipse(x+s*26,y-s*14,s*3.5,s*3.5,0,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(x-s*24,y+s*4); ctx.quadraticCurveTo(x-s*44+Math.sin(t*.06)*s*6,y+s*22,x-s*58,y+s*8);
+  ctx.lineWidth=s*9; ctx.strokeStyle=m.col; ctx.stroke(); ctx.lineWidth=1;
+}
+
+function drawDemon(x,y,s,m,t){
+  const wf=Math.sin(t*.09)*.2;
+  [[x-s*18,-1],[x+s*18,1]].forEach(([wx,sg])=>{
+    ctx.save(); ctx.translate(wx,y-s*5); ctx.rotate(wf*sg);
+    ctx.fillStyle=m.c2+'cc'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(sg*s*35,-s*28); ctx.lineTo(sg*s*28,s*16); ctx.closePath(); ctx.fill(); ctx.restore();
+  });
+  ctx.fillStyle=m.col; ctx.fillRect(x-s*18,y-s*16,s*36,s*42);
+  ctx.beginPath(); ctx.ellipse(x,y-s*28,s*18,s*16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=m.c2;
+  [[-s*12],[s*12]].forEach(([ox])=>{ ctx.beginPath(); ctx.moveTo(x+ox,y-s*40); ctx.lineTo(x+ox*1.5,y-s*58); ctx.lineTo(x+ox*.4,y-s*40); ctx.fill(); });
+  ctx.fillStyle=m.eye; ctx.shadowColor=m.eye; ctx.shadowBlur=s*7;
+  ctx.beginPath(); ctx.ellipse(x-s*7,y-s*30,s*5,s*5,0,0,Math.PI*2); ctx.ellipse(x+s*7,y-s*30,s*5,s*5,0,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+}
+
+function drawTorch(x,y){
+  V.torch++;
+  ctx.fillStyle='#664422'; ctx.fillRect(x-4,y,8,16);
+  const fl=Math.sin(V.torch*.22)*4;
+  ctx.fillStyle=`rgb(255,${80+Math.floor(Math.random()*70)},0)`;
+  ctx.beginPath(); ctx.ellipse(x,y-9+fl*.4,7,12,fl*.04,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffff66'; ctx.beginPath(); ctx.ellipse(x,y-6+fl*.2,3.5,7,0,0,Math.PI*2); ctx.fill();
+  const grd=ctx.createRadialGradient(x,y-6,0,x,y-6,35);
+  grd.addColorStop(0,'rgba(255,140,0,0.18)'); grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd; ctx.fillRect(x-35,y-42,70,70);
+}
+
+function drawScene(){
+  const boss=isBoss(G.floor);
+  const shx=(Math.random()-.5)*V.sx, shy=(Math.random()-.5)*V.sy;
+  V.sx*=.82; V.sy*=.82; if(V.sx<.1) V.sx=0; if(V.sy<.1) V.sy=0;
+  ctx.save(); ctx.translate(shx,shy);
+
+  // Background
+  const bg=ctx.createLinearGradient(0,0,0,CH);
+  bg.addColorStop(0,boss?'#1a0000':'#0d0d1a'); bg.addColorStop(1,boss?'#350000':'#1a1a2e');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,CW,CH);
+
+  // Brick wall
+  ctx.fillStyle=boss?'#140000':'#0f0f22'; ctx.fillRect(0,0,CW,CH*.76);
+  for(let bx=0;bx<CW;bx+=48){
+    for(let by=0;by<CH*.76;by+=20){
+      const off=Math.floor(by/20)%2===0?0:24;
+      ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(bx+off,by,46,18);
+    }
+  }
+
+  // Floor
+  ctx.fillStyle=boss?'#1f0000':'#111130';
+  for(let tx=0;tx<CW;tx+=32){
+    for(let ty=Math.floor(CH*.76);ty<CH;ty+=16){
+      if((Math.floor(tx/32)+Math.floor(ty/16))%2===0) ctx.fillRect(tx,ty,32,16);
+    }
+  }
+  ctx.fillStyle=boss?'#440000':'#1a1a33'; ctx.fillRect(0,CH*.76,CW,4);
+
+  drawTorch(36,CH*.6); drawTorch(CW-36,CH*.6);
+
+  // Boss warning flash
+  if(V.bossWarn>0){ ctx.fillStyle=`rgba(255,0,0,${(V.bossWarn/120)*.25})`; ctx.fillRect(0,0,CW,CH); V.bossWarn--; }
+
+  // Monster
+  const mon=monsterFor(G.floor);
+  const mx=CW/2, my=CH*.62;
+  const bounce=Math.sin(V.anim*.1)*3;
+  const scale=mon.sh*(boss?1.4:1)*(CW/440);
+
+  ctx.save(); ctx.translate(0,bounce);
+  if(V.dead){ ctx.globalAlpha=V.deadT/12; ctx.translate(mx,my); ctx.rotate((12-V.deadT)*.08); ctx.translate(-mx,-my); }
+  const nm=mon.name.toLowerCase();
+  if(nm==='slime')         drawSlime(mx,my,scale,mon,V.anim);
+  else if(nm==='goblin')   drawGoblin(mx,my,scale,mon,V.anim);
+  else if(nm==='orc')      drawOrc(mx,my,scale,mon,V.anim);
+  else if(nm==='skeleton') drawSkeleton(mx,my,scale,mon,V.anim);
+  else if(nm==='dragon')   drawDragon(mx,my,scale,mon,V.anim);
+  else                     drawDemon(mx,my,scale,mon,V.anim);
+  ctx.globalAlpha=1; ctx.restore();
+
+  // "CLICK!" prompt (until first click)
+  if(V.clickPrompt){
+    const pulse=0.6+Math.abs(Math.sin(V.anim*.05))*.4;
+    ctx.globalAlpha=pulse;
+    ctx.fillStyle='#ffffff';
+    ctx.font='bold 11px "Press Start 2P"';
+    ctx.textAlign='center';
+    // Arrow pointing at monster
+    ctx.fillText('👆 CLICK TO ATTACK!',CW/2,my-scale*60);
+    ctx.globalAlpha=1;
+  }
+
+  // HP Bar
+  if(!V.dead&&G.mmhp>0){
+    const bw=CW*.72, bx=(CW-bw)/2, by=14, bh=16;
+    ctx.fillStyle='#000'; ctx.fillRect(bx-2,by-2,bw+4,bh+4);
+    ctx.fillStyle='#330000'; ctx.fillRect(bx,by,bw,bh);
+    const r=Math.max(0,G.mhp/G.mmhp);
+    ctx.fillStyle=r>.5?'#33cc44':r>.25?'#cccc00':'#cc2222';
+    ctx.fillRect(bx,by,bw*r,bh);
+    // HP bar shine
+    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(bx,by,bw*r,bh/2);
+    ctx.strokeStyle='#888'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
+
+    ctx.fillStyle='#fff'; ctx.font='bold 8px "Press Start 2P"'; ctx.textAlign='center';
+    const pfx=boss?'👑 BOSS – ':'';
+    ctx.fillText(`${pfx}${mon.name}`,CW/2,by+bh+15);
+    ctx.fillStyle='#aabbcc'; ctx.font='7px "Press Start 2P"';
+    ctx.fillText(`Floor ${G.floor}  •  HP: ${fmt(G.mhp)} / ${fmt(G.mmhp)}`,CW/2,by+bh+27);
+
+    // Click damage preview
+    ctx.fillStyle='#ff9944'; ctx.font='6px "Press Start 2P"';
+    ctx.fillText(`👆 Click dmg: ${fmt(clickDmg())}`,CW/2,by+bh+40);
+  }
+
+  // Periodic auto-damage text
+  if(!V.dead&&totalDPS()>0&&V.anim%25===0){
+    V.ft.push({x:CW/2+(Math.random()-.5)*45,y:CH*.44+(Math.random()-.5)*18,t:'-'+fmt(totalDPS()*.5),c:'#ff5555',l:35,vy:-1.1});
+  }
+
+  // Floating texts
+  ctx.textAlign='center';
+  for(let i=V.ft.length-1;i>=0;i--){
+    const f=V.ft[i];
+    f.y+=f.vy; f.l--;
+    ctx.globalAlpha=f.l/55;
+    ctx.fillStyle=f.c;
+    ctx.font=(f.big?'bold 10px':'8px')+' "Press Start 2P"';
+    ctx.fillText(f.t,f.x,f.y);
+    if(f.l<=0) V.ft.splice(i,1);
+  }
+  ctx.globalAlpha=1;
+
+  // Gold particles
+  for(let i=V.gp.length-1;i>=0;i--){
+    const p=V.gp[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=.16; p.l--;
+    ctx.globalAlpha=p.l/40; ctx.fillStyle='#ffd700'; ctx.fillRect(p.x-3,p.y-3,6,6);
+    if(p.l<=0) V.gp.splice(i,1);
+  }
+  ctx.globalAlpha=1;
+
+  ctx.restore(); // shake
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════════════════════
+
+function renderTopBar(){
+  document.getElementById('v-gold').textContent=fmt(G.gold);
+  document.getElementById('v-gems').textContent=G.gems;
+  document.getElementById('v-floor').textContent=G.floor;
+}
+function renderStats(){
+  document.getElementById('v-dps').textContent=fmt(totalDPS());
+  document.getElementById('v-gps').textContent=fmt(gps());
+  document.getElementById('v-kills').textContent=fmt(G.kills);
+  document.getElementById('v-best').textContent='F'+G.maxF;
+}
+
+function renderPanel(){
+  V.panelDirty=false;
+  const p=document.getElementById('panel');
+  if(V.tab==='heroes')   p.innerHTML=buildHeroesHTML();
+  else if(V.tab==='upgrades') p.innerHTML=buildUpgradesHTML();
+  else if(V.tab==='trophies') p.innerHTML=buildTrophiesHTML();
+  else                        p.innerHTML=buildPrestigeHTML();
+}
+
+function buildHeroesHTML(){
+  const qties=[1,10,100,'max'];
+  let h=`<div class="buy-row">
+    <span class="buy-label">BUY:</span>
+    ${qties.map(q=>`<button class="bqty${V.buyQty===q?' on':''}" onclick="setBuy(${typeof q==='string'?`'${q}'`:q})">${q==='max'?'MAX':'×'+q}</button>`).join('')}
+    <span style="font-size:6px;color:#556688;margin-left:6px;">Click card to buy</span>
+  </div>`;
+  h+=HEROES.map((hr,i)=>{
+    const qty=V.buyQty==='max'?Math.max(1,maxBuy(i)):V.buyQty;
+    const cost=heroCost(i,qty);
+    const afford=G.gold>=cost;
+    const dps=heroDPS(i);
+    return `<div class="hcard${!afford?' dim':''}" onclick="buyHero(${i})" title="Click to buy ${qty} ${hr.name}${qty>1?'s':''}">
+      <div class="hico">${hr.e}</div>
+      <div>
+        <div class="hname" style="color:${hr.col}">${hr.name}</div>
+        <div class="hown">Owned: <b style="color:#ffd700">${G.h[i]}</b></div>
+        <div class="hdps">${G.h[i]>0?'DPS: '+fmt(dps):'Hire to start attacking'}</div>
+      </div>
+      <div>
+        <div class="hcost">💰 ${fmt(cost)}</div>
+        <div class="hbuy-n">${qty>1?`(×${qty})`:'(×1)'}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return h;
+}
+
+function setBuy(q){ V.buyQty=q; V.panelDirty=true; }
+
+function buildUpgradesHTML(){
+  let h='<div style="font-size:6px;color:#6677aa;margin-bottom:8px;line-height:2;">Upgrades multiply a hero type\'s total damage. Buy heroes first to unlock them.</div>';
+  HEROES.forEach((hr,hi)=>{
+    const heroUpgs=UPGRADES.filter(u=>u.heroIdx===hi);
+    h+=`<div class="sec-hdr">${hr.e} ${hr.name} <span style="color:#556688;font-size:6px;">(owned: ${G.h[hi]})</span></div>`;
+    h+=heroUpgs.map(u=>{
+      const bought=!!G.u[u.id];
+      const hasH=G.h[hi]>=u.req;
+      const afford=G.gold>=u.cost;
+      let cls='ucard';
+      if(bought) cls+=' done';
+      else if(!afford||!hasH) cls+=' dim';
+      return `<div class="${cls}" onclick="buyUpgrade('${u.id}')" title="${bought?'Already purchased':!hasH?'Need more heroes':'Click to buy'}">
+        <span class="ulvl">${bought?'✓ OWNED':hasH?'':'Need '+u.req+'+'}</span>
+        <div class="uname">${u.name}</div>
+        <div class="udesc">${u.desc}</div>
+        ${!bought?`<div class="ucost">💰 ${fmt(u.cost)}</div>`:''}
+      </div>`;
+    }).join('');
+  });
+  return h;
+}
+
+function buildTrophiesHTML(){
+  const got=ACHS.filter(a=>G.ach.has(a.id)).length;
+  let h=`<div style="font-size:6px;color:#6677aa;margin-bottom:8px;">${got} / ${ACHS.length} unlocked</div>`;
+  h+=ACHS.map(a=>{
+    const g=G.ach.has(a.id);
+    return `<div class="acard${g?' got':''}">
+      <div class="aico">${g?a.icon:'🔒'}</div>
+      <div>
+        <div class="aname">${g?a.name:'???'}</div>
+        <div class="adesc">${g?a.desc:'Keep playing to unlock'}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return h;
+}
+
+function buildPrestigeHTML(){
+  const g=gemsFor(), can=canPrest();
+  return `<div id="prest-panel">
+    <div class="pinfo">
+      <span class="big">✨ PRESTIGE ✨</span>
+      <b style="color:#ff9966">Resets:</b> gold, heroes, floor<br>
+      <b style="color:#66ff99">Keeps:</b> gems, achievements, trophies<br><br>
+      Current gems: <span style="color:#cc66ff;font-size:9px;">${G.gems} 💎</span><br>
+      Gold bonus: <span style="color:#66ff88">+${((gemMult()-1)*100).toFixed(1)}% all gold</span><br><br>
+      Best floor reached: <span style="color:#ffcc44">${G.maxF}</span><br>
+      Times prestiged: <span style="color:#ffcc44">${G.prest}</span><br><br>
+      ${can
+        ?`Prestige reward: <span class="big" style="color:#ffd700">+${g} 💎</span>`
+        :`<span style="color:#ff6644;font-size:7px;">Reach floor 20 to unlock prestige</span>`}
+    </div>
+    <button id="prest-btn" ${!can?'disabled':''} onclick="doPrestige()">
+      ${can?`PRESTIGE (+${g} 💎)`:'FLOOR 20 REQUIRED'}
+    </button>
+    ${can?`<div style="font-size:6px;color:#6677aa;margin-top:10px;line-height:2;">After prestige your heroes auto-fight faster<br>and all gold rewards are permanently boosted.</div>`:''}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GAME LOOP
+// ══════════════════════════════════════════════════════════════
+
+let lastT=0,saveT=0,panelT=0;
+function loop(ts){
+  const dt=Math.min((ts-lastT)/1000,.12);
+  lastT=ts; V.anim++;
+
+  if(!V.dead&&G.mmhp>0){
+    G.mhp=Math.max(0,G.mhp-totalDPS()*dt);
+    if(G.mhp<=0) killMonster();
+  }
+  if(V.dead){ V.deadT--; if(V.deadT<=0) spawnMonster(); }
+
+  if(ts-saveT>30000){ saveT=ts; save(); }
+
+  drawScene();
+  renderTopBar();
+  renderStats();
+  if(V.panelDirty||ts-panelT>400){ panelT=ts; renderPanel(); }
+
+  requestAnimationFrame(loop);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+
+function init(){
+  document.querySelectorAll('.tb').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); V.tab=b.dataset.t; V.panelDirty=true;
+    });
+  });
+
+  canvas.addEventListener('click', onCanvasClick);
+  canvas.addEventListener('mouseenter',()=>{ canvas.style.cursor='crosshair'; });
+
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  const loaded=load();
+  if(!loaded){ G=newState(); }
+  // Show help on very first visit
+  if(!loaded){ setTimeout(showHelp,800); }
+
+  spawnMonster(); checkAch(); renderPanel();
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>
